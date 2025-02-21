@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"image"
 	"image/color"
+	"image/png"
 	"log"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/go-vgo/robotgo"
@@ -21,6 +24,7 @@ const (
 )
 
 func main() {
+
 	// Detect screen size
 	screenWidth, screenHeight := robotgo.GetScreenSize()
 
@@ -44,6 +48,12 @@ func main() {
 		}
 
 		img := robotgo.ToImage(gameWindow)
+		// 预览截图
+		// 保存图片到 ./img/ 目录
+		if err := saveImage(&img, "./img"); err != nil {
+			log.Printf("Failed to save image: %v", err)
+		}
+
 		robotgo.FreeBitmap(gameWindow)
 
 		// Check for obstacles and game over
@@ -96,4 +106,54 @@ func isObstacleDetected(img image.Image) bool {
 		}
 	}
 	return false
+}
+
+// 保存图片
+
+func saveImage(img *image.Image, dir string) error {
+
+	// 获取当前时间
+	now := time.Now()
+
+	// 格式化日期时间
+	dateStr := now.Format("200601021504")
+
+	// 获取三位数序号
+	var i int
+	for {
+		filename := fmt.Sprintf("%s/%s%03d.png", dir, dateStr, i)
+		if _, err := os.Stat(filename); os.IsNotExist(err) {
+			// 文件不存在，可以使用该序号
+			err := saveImageToFile(img, filename)
+			if err != nil {
+				return fmt.Errorf("保存图片失败: %w", err)
+			}
+			fmt.Println("图片已保存:", filename)
+			return nil
+		}
+		i++
+	}
+}
+
+func saveImageToFile(img *image.Image, filename string) error {
+	// 创建目录，如果不存在
+	err := os.MkdirAll(filepath.Dir(filename), os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	// 创建文件
+	f, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	// 保存图像为 PNG 格式
+	err = png.Encode(f, *img)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
